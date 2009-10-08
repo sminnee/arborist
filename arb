@@ -1,0 +1,87 @@
+#!/usr/bin/php
+<?php
+
+require_once('Spyc.php');
+
+if(file_exists(".mergesources.yml")) {
+	$parser = new Spyc();
+	$mergeSources = $parser->load(file_get_contents('.mergesources.yml'));
+
+	$svnInfo = new SimpleXMLElement(`svn info --xml`);
+	$svnRoot = $svnInfo->entry->repository->root.'';
+	$svn = new SVNHelp($svnRoot);
+	
+	if($_SERVER['argv'][1]) {
+		list($mergeSource, $dir) = explode("/", $_SERVER['argv'][1]);
+		if(isset($mergeSources[$mergeSource][$dir])) {
+			$source = $mergeSources[$mergeSource][$dir];
+			if($source[0] != "/") $source = "/$source";
+
+			echo "$dir (from $svnRoot$source)\n";
+		 	
+			$revs = trim(`svn mergeinfo --show-revs=eligible $svnRoot$source $dir`);
+			$revs = $revs ? explode("\n", str_replace("r","", $revs)) : array();
+			
+			$svn->formatMergeReport($revs, $source, $dir);
+		} else {
+			echo "Can't find merge source $mergeSource/$dir\n";
+			exit(2);
+		}
+		
+	} else {
+		foreach($mergeSources as $name => $items) {
+			echo "Looking for changesets from $name...\n\n";
+
+			foreach($items as $dir => $source) {
+				if($source[0] != "/") $source = "/$source";
+				echo "$dir (from $svnRoot$source)\n";
+				echo `svn mergeinfo --show-revs=eligible $svnRoot$source $dir`;
+				echo "\n";
+			}
+		}
+	}
+	
+} else {
+	echo "Can't find .mergesources.yml\n";
+	exit(1);
+}
+
+class SVNHelp {
+	protected $repos;
+
+	function __construct($repos) {
+		$this->repos = $repos;
+	}
+
+	function repos() {
+		return $this->repos;
+	}
+	
+	function formatMergeReport($revs, $mergeSource, $dir) {
+		$fullMergeSource = $this->repos() . $mergeSource;
+
+		foreach($revs as $rev) {
+			$rev = str_replace("r","", $rev);
+			echo "svn merge -c $rev $fullMergeSource $dir\n";
+			echo "svn commit $dir -m " . escapeshellarg($this->revlog($rev, 'msg', $fullMergeSource)
+				. " (from r$rev)") . "\n\n";
+		}   
+	}
+	
+	
+	/**
+	 * Get the log message$svn for a single revision
+	 */
+	function revlog($rev, $infoPart = null, $svnDir = null) {
+		if(!$svnDir) $svnDir = $this->repos();
+		$xml = new SimpleXMLElement(`svn log --xml -r $rev $svnDir`);
+		$info = array(
+			'author' => $xml->logentry->author,
+			'date' => $xml->logentry->date,
+			'msg' => trim($xml->logentry->msg),
+		);
+		if($infoPart) return $info[$infoPart];
+		else return $info;
+	}
+	
+}
