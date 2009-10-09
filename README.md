@@ -48,8 +48,14 @@ Calling this command will give a summary of everything that needs to be merged i
 
 	> arb
 	
-Once we see that, we can get a more detailed view of a particular merge source.  In particular, it
-will output a list of commands that can be executed to merge the changes in as individual
-changesets.
+Once we see that, we can start an interactive session with a particular merge source.  Choose a
+mergesource and start arborist using a command of this form:
 
 	> arb rel1/sapphire
+
+Arborist will print recommended merge and commit commands on the script, asking whether or not you
+would like to execute each of them.
+
+ * To execute the command, press enter
+ * To skip the command, enter "n"
+ * To stop the script exectue, press Ctrl-C

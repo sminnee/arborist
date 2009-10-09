@@ -32,9 +32,9 @@ if(file_exists(".mergesources.yml")) {
 			}
 			
 			if($mergebacks) {
-				echo "svn merge --record-only -c " . implode(",", $mergebacks) . " " 
-					.$svn->repos() . $source . " $dir\n";
-				echo "svn commit $dir -m 'MINOR: Updating mergeinfo to ignore mergebacks'\n\n";
+				suggestCommand("svn merge --record-only -c " . implode(",", $mergebacks) . " " 
+					.$svn->repos() . $source . " $dir");
+				suggestCommand("svn commit $dir -m 'MINOR: Updating mergeinfo to ignore mergebacks'");
 			}
 			
 			$svn->formatMergeReport($revs, $source, $dir);
@@ -61,6 +61,18 @@ if(file_exists(".mergesources.yml")) {
 	exit(1);
 }
 
+/**
+ * Prints the command, waits for a keystroke, and then executes it. saying that the command is being executed
+ */
+function suggestCommand($command) {
+	echo "EXEC: $command [Y\\n]";
+	$dummy = trim(fgets(STDIN));
+	if(!$dummy || strtolower($dummy[0]) != 'n') {
+		passthru($command);
+		echo "\n";
+	}
+}
+
 class SVNHelp {
 	protected $repos;
 
@@ -77,9 +89,9 @@ class SVNHelp {
 
 		foreach($revs as $rev) {
 			$rev = str_replace("r","", $rev);
-			echo "svn merge -c $rev $fullMergeSource $dir\n";
-			echo "svn commit $dir -m " . escapeshellarg($this->revlog($rev, 'msg', $fullMergeSource)
-				. " (from r$rev)") . "\n\n";
+			suggestCommand("svn merge -c $rev $fullMergeSource $dir");
+			suggestCommand("svn commit $dir -m " . escapeshellarg($this->revlog($rev, 'msg', $fullMergeSource)
+				. " (from r$rev)"));
 		}   
 	}
 	
