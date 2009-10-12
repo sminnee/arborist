@@ -120,9 +120,11 @@ class SVNHelp {
 
 		foreach($revs as $rev) {
 			$rev = str_replace("r","", $rev);
+			$logMessage = $this->revlog($rev, 'msg', $fullMergeSource);
+			echo "r$rev: $logMessage\n";
 			suggestCommand("svn merge -c $rev $fullMergeSource $dir");
-			suggestCommand("svn commit $dir -m " . escapeshellarg($this->revlog($rev, 'msg', $fullMergeSource)
-				. " (from r$rev)"));
+			suggestCommand("svn commit $dir -m " . escapeshellarg($logMessage . " (from r$rev)"));
+			echo "\n";
 		}   
 	}
 	
