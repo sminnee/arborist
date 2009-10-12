@@ -12,6 +12,21 @@ if(file_exists(".mergesources.yml")) {
 	$svn = new SVNHelp($svnRoot);
 	
 	if($_SERVER['argv'][1]) {
+		if(strpos($_SERVER['argv'][1], "/") !== false) {
+			list($mergeSource, $dir) = explode("/", $_SERVER['argv'][1]);
+			$action = "interactive";
+		} else {
+			$onlyMergeSource = $_SERVER['argv'][1];
+			$onlyDir = null;
+			$action = "summary";
+		}
+	} else {
+		$action = "summary";
+	}
+	
+	
+	switch($action) {
+	case "interactive":
 		list($mergeSource, $dir) = explode("/", $_SERVER['argv'][1]);
 		if(isset($mergeSources[$mergeSource][$dir])) {
 			$source = $mergeSources[$mergeSource][$dir];
@@ -42,18 +57,25 @@ if(file_exists(".mergesources.yml")) {
 			echo "Can't find merge source $mergeSource/$dir\n";
 			exit(2);
 		}
+		break;
 		
-	} else {
+	case "summary":
+		
 		foreach($mergeSources as $name => $items) {
+			if($onlyMergeSource && $name != $onlyMergeSource) continue;
+			
 			echo "Looking for changesets from $name...\n\n";
 
 			foreach($items as $dir => $source) {
+				if($onlyDir && $dir != $onlyDir) continue;
+
 				if($source[0] != "/") $source = "/$source";
 				echo "$dir (from $svnRoot$source)\n";
 				echo `svn mergeinfo --show-revs=eligible $svnRoot$source $dir`;
 				echo "\n";
 			}
 		}
+		break;
 	}
 	
 } else {

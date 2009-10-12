@@ -47,6 +47,12 @@ Once the `.mergesource.yml` file has been set up, we use it as follows:
 Calling this command will give a summary of everything that needs to be merged in:
 
 	> arb
+
+
+Alternatively, you can see a summary of everything that should be merged in from one
+release/project:
+
+	> arb rel1
 	
 Once we see that, we can start an interactive session with a particular merge source.  Choose a
 mergesource and start arborist using a command of this form:
