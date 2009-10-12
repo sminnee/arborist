@@ -60,6 +60,7 @@ if(file_exists(".mergesources.yml")) {
 		break;
 		
 	case "summary":
+		$nothingFrom = array();
 		
 		foreach($mergeSources as $name => $items) {
 			if($onlyMergeSource && $name != $onlyMergeSource) continue;
@@ -70,11 +71,19 @@ if(file_exists(".mergesources.yml")) {
 				if($onlyDir && $dir != $onlyDir) continue;
 
 				if($source[0] != "/") $source = "/$source";
-				echo "$dir (from $svnRoot$source)\n";
-				echo `svn mergeinfo --show-revs=eligible $svnRoot$source $dir`;
-				echo "\n";
+				$revs = trim(`svn mergeinfo --show-revs=eligible $svnRoot$source $dir`);
+				if($revs) {
+					echo "$dir (from $svnRoot$source)\n$revs\n\n";
+				} else {
+					$nothingFrom[] = "$name/$dir";
+				}
 			}
 		}
+		
+		if($nothingFrom) {
+			echo "Nothing to merge from: " . implode(", ", $nothingFrom) . "\n";
+		}
+		
 		break;
 	}
 	
