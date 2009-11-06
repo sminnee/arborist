@@ -10,7 +10,7 @@ if(file_exists(".mergesources.yml")) {
 	$svnInfo = new SimpleXMLElement(`svn info --xml`);
 	$svnRoot = $svnInfo->entry->repository->root.'';
 	$svn = new SVNHelp($svnRoot);
-	
+
 	if($_SERVER['argv'][1]) {
 		if(strpos($_SERVER['argv'][1], "/") !== false) {
 			list($mergeSource, $dir) = explode("/", $_SERVER['argv'][1]);
@@ -23,8 +23,7 @@ if(file_exists(".mergesources.yml")) {
 	} else {
 		$action = "summary";
 	}
-	
-	
+
 	switch($action) {
 	case "interactive":
 		list($mergeSource, $dir) = explode("/", $_SERVER['argv'][1]);
@@ -33,11 +32,11 @@ if(file_exists(".mergesources.yml")) {
 			if($source[0] != "/") $source = "/$source";
 
 			echo "$dir (from $svnRoot$source)\n";
-		 	
 			$revs = trim(`svn mergeinfo --show-revs=eligible $svnRoot$source $dir`);
+
 			$revs = $revs ? explode("\n", str_replace("r","", $revs)) : array();
-			
-			
+
+
 			$mergebacks = array();
 			foreach($revs as $i => $rev) {
 				if($svn->isRevMergedFrom($rev, $svn->repos().$source, $dir)) {
@@ -45,26 +44,26 @@ if(file_exists(".mergesources.yml")) {
 					unset($revs[$i]);
 				}
 			}
-			
 			if($mergebacks) {
 				suggestCommand("svn merge --record-only -c " . implode(",", $mergebacks) . " " 
+
 					.$svn->repos() . $source . " $dir");
 				suggestCommand("svn commit $dir -m 'MINOR: Updating mergeinfo to ignore mergebacks'");
 			}
-			
 			$svn->formatMergeReport($revs, $source, $dir);
+
 		} else {
 			echo "Can't find merge source $mergeSource/$dir\n";
 			exit(2);
 		}
 		break;
-		
+
 	case "summary":
 		$nothingFrom = array();
-		
+
 		foreach($mergeSources as $name => $items) {
 			if($onlyMergeSource && $name != $onlyMergeSource) continue;
-			
+
 			echo "Looking for changesets from $name...\n\n";
 
 			foreach($items as $dir => $source) {
@@ -79,14 +78,14 @@ if(file_exists(".mergesources.yml")) {
 				}
 			}
 		}
-		
+
 		if($nothingFrom) {
 			echo "Nothing to merge from: " . implode(", ", $nothingFrom) . "\n";
 		}
-		
+
 		break;
 	}
-	
+
 } else {
 	echo "Can't find .mergesources.yml\n";
 	exit(1);
@@ -114,8 +113,8 @@ class SVNHelp {
 	function repos() {
 		return $this->repos;
 	}
-	
 	function formatMergeReport($revs, $mergeSource, $dir) {
+
 		$fullMergeSource = $this->repos() . $mergeSource;
 
 		foreach($revs as $rev) {
@@ -125,9 +124,9 @@ class SVNHelp {
 			suggestCommand("svn merge -c $rev $fullMergeSource $dir");
 			suggestCommand("svn commit $dir -m " . escapeshellarg($logMessage . " (from r$rev)"));
 			echo "\n";
-		}   
+		}
 	}
-	
+
 	function isRevMergedFrom($rev, $revSource, $originalSource) {
 		$svnInfo = new SimpleXMLElement(`svn log -c $rev -g --xml $revSource`);
 		foreach($svnInfo->xpath('//logentry/logentry') as $src) {
@@ -139,8 +138,8 @@ class SVNHelp {
 		}
 		return false;
 	}
-	
-	
+
+
 	/**
 	 * Get the log message$svn for a single revision
 	 */
@@ -155,5 +154,5 @@ class SVNHelp {
 		if($infoPart) return $info[$infoPart];
 		else return $info;
 	}
-	
+
 }
