@@ -141,11 +141,15 @@ class SVNHelp {
 	function formatMergeReport($revs, $mergeSource, $dir, $startrev = null) {
 		$fullMergeSource = $this->repos() . $mergeSource;
 
-		foreach($revs as $rev) {
+		$numRevs = sizeof($revs);
+
+		foreach($revs as $i => $rev) {
 			$rev = str_replace("r","", $rev);
 			if($startrev && $rev < $startrev) continue;
+
 			$logMessage = $this->revlog($rev, 'msg', $fullMergeSource);
-			echo "r$rev: $logMessage\n";
+			echo "[" . ($i+1) . "/$numRevs] r$rev: $logMessage\n";
+			suggestCommand("svn update $dir");
 			suggestCommand("svn merge -c $rev $fullMergeSource $dir");
 			suggestCommand("svn commit $dir -m " . escapeshellarg($logMessage . " (from r$rev)"));
 			echo "\n";
