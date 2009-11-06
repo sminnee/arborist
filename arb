@@ -44,7 +44,6 @@ if(file_exists(".mergesources.yml")) {
 
 	switch($action) {
 	case "interactive":
-		list($mergeSource, $dir) = explode("/", $_SERVER['argv'][1]);
 		if(isset($mergeSources[$mergeSource][$dir])) {
 			$source = $mergeSources[$mergeSource][$dir];
 			if($source[0] != "/") $source = "/$source";
