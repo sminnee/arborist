@@ -44,16 +44,17 @@ Using `arb`
 
 Once the `.mergesource.yml` file has been set up, we use it as follows:
 
+### Basic Usage
+
 Calling this command will give a summary of everything that needs to be merged in:
 
 	> arb
-
 
 Alternatively, you can see a summary of everything that should be merged in from one
 release/project:
 
 	> arb rel1
-	
+
 Once we see that, we can start an interactive session with a particular merge source.  Choose a
 mergesource and start arborist using a command of this form:
 
@@ -66,10 +67,14 @@ would like to execute each of them.
  * To skip the command, enter "n"
  * To stop the script exectue, press Ctrl-C
 
+### Resuming an aborted merge session
+
 	> arb rel1/sapphire --startrev=1234
 
 This will execute the same command as the previous item; however, it will start the merging from
 revision #1234.  This is useful if you had to cancel your arborist session for some reason.
+
+### Cherry picking revisions
 
 	> arb rel1/sapphire --revs=100,101,106,107
 
