@@ -56,8 +56,13 @@ if(file_exists(".mergesources.yml")) {
 			if($source[0] != "/") $source = "/$source";
 
 			echo "$dir (from $svnRoot$source)\n";
-			$revs = trim(`svn mergeinfo --show-revs=eligible $svnRoot$source $dir`);
 
+			// Handle the revs argument
+			if(isset($keyedOptions['revs'])) {
+				$revs = preg_replace('/ *, */', "\n", $keyedOptions['revs']);
+			} else {
+				$revs = trim(`svn mergeinfo --show-revs=eligible $svnRoot$source $dir`);
+			}
 			$revs = $revs ? explode("\n", str_replace("r","", $revs)) : array();
 
 
@@ -69,7 +74,7 @@ if(file_exists(".mergesources.yml")) {
 				}
 			}
 
-			if($mergebacks && !$startrev) {
+			if($mergebacks && !$startrev && !isset($keyedOptions['revs'])) {
 				suggestCommand("svn merge --record-only -c " . implode(",", $mergebacks) . " "
 					.$svn->repos() . $source . " $dir");
 				suggestCommand("svn commit $dir -m 'MINOR: Updating mergeinfo to ignore mergebacks'");

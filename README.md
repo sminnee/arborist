@@ -70,3 +70,8 @@ would like to execute each of them.
 
 This will execute the same command as the previous item; however, it will start the merging from
 revision #1234.  This is useful if you had to cancel your arborist session for some reason.
+
+	> arb rel1/sapphire --revs=100,101,106,107
+
+This will limit the scope of your arborist execution to some specific revisions.  This is useful if
+you want to use arborist to cherry pick, rather than do a full merge.
