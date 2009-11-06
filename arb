@@ -24,6 +24,24 @@ if(file_exists(".mergesources.yml")) {
 		$action = "summary";
 	}
 
+	$options = $_SERVER['argv'];
+	array_shift($options);
+	array_shift($options);
+
+	$keyedOptions = array();
+	if($options) foreach($options as $option) {
+		// NO SPACES!  I'm a bad parser
+		if(preg_match('/--*([^=]+)=(.*)/', $option, $matches)) {
+			$key = trim(strtolower($matches[1]));
+			$val = trim($matches[2]);
+			$keyedOptions[$key] = $val;
+		}
+	}
+
+	if(isset($keyedOptions['startrev'])) $startrev = $keyedOptions['startrev'];
+	else $startrev = null;
+
+
 	switch($action) {
 	case "interactive":
 		list($mergeSource, $dir) = explode("/", $_SERVER['argv'][1]);
@@ -44,14 +62,14 @@ if(file_exists(".mergesources.yml")) {
 					unset($revs[$i]);
 				}
 			}
-			if($mergebacks) {
-				suggestCommand("svn merge --record-only -c " . implode(",", $mergebacks) . " " 
 
+			if($mergebacks && !$startrev) {
+				suggestCommand("svn merge --record-only -c " . implode(",", $mergebacks) . " "
 					.$svn->repos() . $source . " $dir");
 				suggestCommand("svn commit $dir -m 'MINOR: Updating mergeinfo to ignore mergebacks'");
 			}
-			$svn->formatMergeReport($revs, $source, $dir);
 
+			$svn->formatMergeReport($revs, $source, $dir, $startrev);
 		} else {
 			echo "Can't find merge source $mergeSource/$dir\n";
 			exit(2);
@@ -113,12 +131,13 @@ class SVNHelp {
 	function repos() {
 		return $this->repos;
 	}
-	function formatMergeReport($revs, $mergeSource, $dir) {
 
+	function formatMergeReport($revs, $mergeSource, $dir, $startrev = null) {
 		$fullMergeSource = $this->repos() . $mergeSource;
 
 		foreach($revs as $rev) {
 			$rev = str_replace("r","", $rev);
+			if($startrev && $rev < $startrev) continue;
 			$logMessage = $this->revlog($rev, 'msg', $fullMergeSource);
 			echo "r$rev: $logMessage\n";
 			suggestCommand("svn merge -c $rev $fullMergeSource $dir");

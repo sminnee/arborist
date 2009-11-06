@@ -65,3 +65,8 @@ would like to execute each of them.
  * To execute the command, press enter
  * To skip the command, enter "n"
  * To stop the script exectue, press Ctrl-C
+
+	> arb rel1/sapphire --startrev=1234
+
+This will execute the same command as the previous item; however, it will start the merging from
+revision #1234.  This is useful if you had to cancel your arborist session for some reason.
