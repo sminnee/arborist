@@ -46,6 +46,13 @@ if(file_exists(".mergesources.yml")) {
 	case "interactive":
 		if(isset($mergeSources[$mergeSource][$dir])) {
 			$source = $mergeSources[$mergeSource][$dir];
+
+			if(preg_match('/^[a-z]+:\/\//', $source)) {
+				echo "Bad merge source: $source\nPlease specify your merge sources relative to the "
+					. "repostory root.\n";
+				exit(3);
+			}
+
 			if($source[0] != "/") $source = "/$source";
 
 			echo "$dir (from $svnRoot$source)\n";
