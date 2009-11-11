@@ -7,7 +7,7 @@ if(file_exists(".mergesources.yml")) {
 	$parser = new Spyc();
 	$mergeSources = $parser->load(file_get_contents('.mergesources.yml'));
 
-	$svnInfo = new SimpleXMLElement(`svn info --xml`);
+	$svnInfo = SVNHelp::xmlCommand("svn info --xml &> /dev/stdout");
 	$svnRoot = $svnInfo->entry->repository->root.'';
 	$svn = new SVNHelp($svnRoot);
 
@@ -162,10 +162,10 @@ class SVNHelp {
 	}
 
 	function isRevMergedFrom($rev, $revSource, $originalSource) {
-		$svnInfo = new SimpleXMLElement(`svn log -c $rev -g --xml $revSource`);
+		$svnInfo = $this->xmlCommand("svn log -c $rev -g --xml $revSource &> /dev/stdout");
 		foreach($svnInfo->xpath('//logentry/logentry') as $src) {
 			$origRev = $src['revision'].'';
-			$origSvnInfo = new SimpleXMLElement(`svn log -c $origRev --xml $originalSource`);
+			$origSvnInfo = $this->xmlCommand("svn log -c $origRev --xml $originalSource &> /dev/stdout");
 			if($origSvnInfo->xpath('//logentry')) {
 				return true;
 			}
@@ -173,13 +173,12 @@ class SVNHelp {
 		return false;
 	}
 
-
 	/**
 	 * Get the log message$svn for a single revision
 	 */
 	function revlog($rev, $infoPart = null, $svnDir = null) {
 		if(!$svnDir) $svnDir = $this->repos();
-		$xml = new SimpleXMLElement(`svn log --xml -r $rev $svnDir`);
+		$xml = $this->xmlCommand("svn log --xml -r $rev $svnDir &> /dev/stdout");
 		$info = array(
 			'author' => $xml->logentry->author,
 			'date' => $xml->logentry->date,
@@ -187,6 +186,23 @@ class SVNHelp {
 		);
 		if($infoPart) return $info[$infoPart];
 		else return $info;
+	}
+
+
+	/**
+	 * Execute a command-line command, parse the result as XML, and return a SimpleXMLElement.
+	 * Die with an error message to the user on a failed parse.
+	 */
+	function xmlCommand($command) {
+		try {
+			$output = `$command`;
+			$svnInfo = @new SimpleXMLElement($output);
+		} catch(Exception $e) {
+			echo "\nCouldn't run this command - it returned bad XML data:\n$command\n\n";
+			echo "The output was as follows:\n$output\n";
+			exit(100);
+		}
+		return $svnInfo;
 	}
 
 }
