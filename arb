@@ -1,6 +1,9 @@
 #!/usr/bin/php
 <?php
 
+// Support commands
+define('DIFF_CMD', dirname(__FILE__) . '/cdiff');
+
 require_once('Spyc.php');
 
 if(file_exists(".mergesources.yml")) {
@@ -174,10 +177,28 @@ class SVNHelp {
 			if($startrev && $rev < $startrev) continue;
 
 			$logMessage = $this->revlog($rev, 'msg', $fullMergeSource);
-			echo "[" . ($i+1) . "/$numRevs] r$rev: $logMessage\n";
-			suggestCommand("svn update $dir");
-			suggestCommand("svn merge -c $rev $fullMergeSource $dir");
-			suggestCommand("svn commit $dir -m " . escapeshellarg($logMessage . " (from r$rev)"));
+
+			echo "[" . ($i+1) . "/$numRevs] Merge r$rev: $logMessage\n";
+			// no need to show EXEC: preamble, just use passthru
+			passthru("svn diff $fullMergeSource -c $rev --diff-cmd " . escapeshellarg(DIFF_CMD));
+			$action = promptUser("Merge?", array(
+				'y' => '(y)es',
+				'n' => '(n)o',
+				'b' => '(b)lock'));
+
+			switch($action) {
+			case 'y':
+				execCommand("svn update $dir");
+				execCommand("svn merge -c $rev $fullMergeSource $dir");
+				execCommand("svn diff $dir --diff-cmd " . escapeshellarg(DIFF_CMD));
+				suggestCommand("svn commit $dir -m " . escapeshellarg($logMessage . " (from r$rev)"));
+				break;
+
+			case 'b':
+				$blockedRevs[] = $rev;
+				break;
+			}
+
 			echo "\n";
 		}
 

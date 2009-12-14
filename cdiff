@@ -1,0 +1,32 @@
+#!/usr/bin/php
+<?php
+
+// For arborist, we always use $istty
+$istty = true;
+
+// Used as a diff replacement
+if(isset($_SERVER['argv'][2])) {
+    $args = $_SERVER['argv'];
+    array_shift($args);
+    $args = array_map('escapeshellarg', $args);
+    passthru("diff " . implode(" ", $args) . " | {$_SERVER['argv'][0]} " . ($istty?"--istty":""));
+
+// Used as a pipe
+} else {
+
+    $in = fopen("php://stdin","r");
+    while($line = fgets($in)) {
+    	if(in_array(substr($line,0,3), array('+++','---'))) $colour = "1;37";
+    	else if(substr($line,0,6) == 'Index:') $colour = "1;37";
+    	else if(substr($line,0,3) == '===') $colour = "36";
+    	else if(substr($line,0,2) == '@@') $colour = "36";
+    	else if($line[0] == '+') $colour = "1;32";
+    	else if($line[0] == '-') $colour = "1;31";
+    	else $colour = "39";
+	
+    	if($istty && $colour) echo "\033[{$colour}m";
+    	echo preg_replace("/\n\$/","",$line);
+    	if($istty && $colour) echo "\033[0m";
+    	echo "\n";
+    }
+}
