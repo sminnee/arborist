@@ -111,9 +111,7 @@ if(file_exists(".mergesources.yml")) {
  * Prints the command, waits for a keystroke, and then executes it. saying that the command is being executed
  */
 function suggestCommand($command) {
-	echo "EXEC: $command [Y\\n]";
-	$dummy = trim(fgets(STDIN));
-	if(!$dummy || strtolower($dummy[0]) != 'n') {
+	if(promptUser("EXEC: $command") == 'y') {
 		passthru($command);
 		echo "\n";
 	}
@@ -127,6 +125,22 @@ function execCommand($command) {
 	passthru($command);
 	echo "\n";
 }
+/**
+ * Prompt the user for a number of options (first is default)
+ */
+function promptUser($message, $options = array('y' => '(y)es', 'n' => '(n)o')) {
+	echo $message . ' [' . implode(', ', $options) . '] ';
+
+	$input = trim(fgets(STDIN));
+	if($input) $firstLetter = strtolower($input[0]); else $firstLetter = null;
+	if(isset($options[$firstLetter])) return $firstLetter;
+	else {
+		$keys = array_keys($options);
+		return $keys[0];
+	}
+}
+
+
 class SVNHelp {
 	protected $repos;
 
