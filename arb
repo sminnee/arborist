@@ -66,21 +66,8 @@ if(file_exists(".mergesources.yml")) {
 			$revs = $revs ? explode("\n", str_replace("r","", $revs)) : array();
 
 
-			$mergebacks = array();
-			foreach($revs as $i => $rev) {
-				if($svn->isRevMergedFrom($rev, $svn->repos().$source, $dir)) {
-					$mergebacks[] = $rev;
-					unset($revs[$i]);
-				}
-			}
 
-			if($mergebacks && !$startrev && !isset($keyedOptions['revs'])) {
-				suggestCommand("svn merge --record-only -c " . implode(",", $mergebacks) . " "
-					.$svn->repos() . $source . " $dir");
-				suggestCommand("svn commit $dir -m 'MINOR: Updating mergeinfo to ignore mergebacks'");
-			}
-
-			$svn->formatMergeReport($revs, $source, $dir, $startrev);
+			$svn->formatMergeReport($revs, $source, $dir, $startrev, !$startrev && !isset($keyedOptions['revs']));
 		} else {
 			echo "Can't find merge source $mergeSource/$dir\n";
 			exit(2);
@@ -132,6 +119,14 @@ function suggestCommand($command) {
 	}
 }
 
+/**
+ * Prints the command and executes it without prompting
+ */
+function execCommand($command) {
+	echo "EXEC: $command\n";
+	passthru($command);
+	echo "\n";
+}
 class SVNHelp {
 	protected $repos;
 
@@ -143,8 +138,20 @@ class SVNHelp {
 		return $this->repos;
 	}
 
-	function formatMergeReport($revs, $mergeSource, $dir, $startrev = null) {
+	function formatMergeReport($revs, $mergeSource, $dir, $startrev = null, $blockMergebacks = true) {
 		$fullMergeSource = $this->repos() . $mergeSource;
+
+		$blockedRevs = array();
+
+		// Find mergebacks to block
+		if($blockMergebacks) {
+			foreach($revs as $i => $rev) {
+				if($this->isRevMergedFrom($rev, $fullMergeSource, $dir)) {
+					$blockedRevs[] = $rev;
+					unset($revs[$i]);
+				}
+			}
+		}
 
 		$numRevs = sizeof($revs);
 
@@ -159,6 +166,16 @@ class SVNHelp {
 			suggestCommand("svn commit $dir -m " . escapeshellarg($logMessage . " (from r$rev)"));
 			echo "\n";
 		}
+
+		// Commit the block request
+		if($blockedRevs) {
+			if(promptUser("Block revisisons " .  implode(",", $blockedRevs) . "?") == 'y') {
+				execCommand("svn merge --record-only -c " . implode(",", $blockedRevs) . " "
+					. escapeshellarg($fullMergeSource) . " " . escapeshellarg($dir));
+				execCommand("svn commit $dir -m 'MINOR: Blocking unnecessary revisions'");
+			}
+		}
+
 	}
 
 	function isRevMergedFrom($rev, $revSource, $originalSource) {
