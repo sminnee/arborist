@@ -60,6 +60,12 @@ if(file_exists(".mergesources.yml")) {
 
 			echo "$dir (from $svnRoot$source)\n";
 
+			// Scrub source and dest of extraneous mergeinfo
+			echo "Checking mergeinfo integrity... ";
+			$svn->scrubMergeInfoIfNecessary($source, true);
+			$svn->scrubMergeInfoIfNecessary($dir);
+			echo "done.\n";
+
 			// Handle the revs argument
 			if(isset($keyedOptions['revs'])) {
 				$revs = preg_replace('/ *, */', "\n", $keyedOptions['revs']);
@@ -67,8 +73,6 @@ if(file_exists(".mergesources.yml")) {
 				$revs = trim(`svn mergeinfo --show-revs=eligible $svnRoot$source $dir`);
 			}
 			$revs = $revs ? explode("\n", str_replace("r","", $revs)) : array();
-
-
 
 			$svn->formatMergeReport($revs, $source, $dir, $startrev, !$startrev && !isset($keyedOptions['revs']));
 		} else {
@@ -155,6 +159,37 @@ class SVNHelp {
 		return $this->repos;
 	}
 
+	/**
+	 * Check that the given URL has no mergeinfo on sub-items, and if so, recommends a commit to
+	 * remove it.
+	 */
+	function scrubMergeInfoIfNecessary($mergeDir, $remoteDir = false) {
+		$url = $remoteDir ? $this->repos() . $mergeDir : $mergeDir;
+		$CLI_url = escapeshellarg($url);
+
+		$CLI_checkItems = array();
+		$subitemsXML = $this->xmlCommand("svn ls --xml $CLI_url");
+		foreach($subitemsXML->xpath('//name') as $subitem) {
+			$CLI_checkItems[] = escapeshellarg("$url/$subitem");
+		}
+
+		// Check for any mergeinfo on subdirectories
+		$checkCommand = "svn propget --recursive svn:mergeinfo " . implode(" ", $CLI_checkItems);
+		if(trim(`$checkCommand`)) {
+			echo "There is junk mergeinfo on files and subdirectories in $url.  I need to scrub it "
+				. " before continuing.\n";
+
+			$propdelDir = $remoteDir ? "/tmp/arb-mergescrub" : $mergeDir;
+			if($remoteDir) execCommand("svn co $CLI_url $propdelDir");
+
+			suggestCommand("svn propdel --recursive svn:mergeinfo $propdelDir/*");
+			passthru("svn diff $propdelDir --diff-cmd " . escapeshellarg(DIFF_CMD));
+			suggestCommand("svn commit $propdelDir -m 'MINOR: Removed explicit svn:mergeinfo from subfolders'");
+			if($remoteDir) execCommand("rm -rf '/tmp/arb-mergescrub'");
+		}
+
+	}
+
 	function formatMergeReport($revs, $mergeSource, $dir, $startrev = null, $blockMergebacks = true) {
 		$fullMergeSource = $this->repos() . $mergeSource;
 
@@ -190,6 +225,7 @@ class SVNHelp {
 			case 'y':
 				execCommand("svn update $dir");
 				execCommand("svn merge -c $rev $fullMergeSource $dir");
+ 				execCommand("svn propdel --recursive svn:mergeinfo $dir/*");
 				execCommand("svn diff $dir --diff-cmd " . escapeshellarg(DIFF_CMD));
 				suggestCommand("svn commit $dir -m " . escapeshellarg($logMessage . " (from r$rev)"));
 				break;
