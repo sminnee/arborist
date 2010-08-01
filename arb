@@ -256,7 +256,11 @@ class SVNHelp {
 
 			$logMessage = $this->revlog($rev, 'msg', $fullMergeSource);
 
+			echo "\n\n";
+			echo "########################################################################################\n";
 			echo "[" . ($i+1) . "/$numRevs] Merge r$rev: $logMessage\n";
+			echo "########################################################################################\n";
+			
 			// no need to show EXEC: preamble, just use passthru
 			passthru("svn diff $fullMergeSource -c $rev --diff-cmd " . escapeshellarg(DIFF_CMD));
 			$action = promptUser("Merge?", array(
