@@ -45,10 +45,36 @@ if(file_exists(".mergesources.yml")) {
 		}
 	}
 
+	if(isset($keyedOptions['help'])) {
+		echo <<<TXT
+NAME
+	arb -- Arborist merge tool. See README.md for more information.
+
+SYNOPSIS
+	arb [rel]
+	
+OPTIONS
+	--help			This help text
+	--startrev	Will start the merging from a certain revision. 
+							This is useful if you had to cancel your arborist session for some reason.
+	--revs			Cherry picking several comma-separated revisions
+	--limit			Limit the number of parsed revisions (if more are found by "svn merge --show-revs-eligible").
+							Used primarily as performance optimization for larger merges.
+							It can also be helpful for committing blocked revisions at the end of a smaller session.
+	--verbose		More logging around actually executed svn commands.
+TXT;
+		echo 'bla';
+		exit();
+	}
+
 	if(isset($keyedOptions['startrev'])) $startrev = $keyedOptions['startrev'];
 	else $startrev = null;
 
-
+	if(isset($keyedOptions['limit'])) $limit = $keyedOptions['limit'];
+	else $limit = null;
+	
+	$verbose = (isset($keyedOptions['verbose']));
+	
 	switch($action) {
 	case "interactive":
 		if(isset($mergeSources[$mergeSource][$dir])) {
@@ -72,11 +98,12 @@ if(file_exists(".mergesources.yml")) {
 
 			// Handle the revs argument
 			if(isset($keyedOptions['revs'])) {
-				$revs = preg_replace('/ *, */', "\n", $keyedOptions['revs']);
+				$revsStr = preg_replace('/ *, */', "\n", $keyedOptions['revs']);
 			} else {
-				$revs = trim(`svn mergeinfo --show-revs=eligible $svnRoot$source $dir`);
+				$revsStr = trim(returnCommand("svn mergeinfo --show-revs=eligible $svnRoot$source $dir"));
 			}
-			$revs = $revs ? explode("\n", str_replace("r","", $revs)) : array();
+			$revs = $revsStr ? explode("\n", str_replace("r","", $revsStr)) : array();
+			if($limit && count($revs) > $limit) $revs = array_slice($revs, 0, $limit);
 
 			$svn->formatMergeReport($revs, $source, $dir, $startrev, !$startrev && !isset($keyedOptions['revs']));
 		} else {
@@ -97,9 +124,11 @@ if(file_exists(".mergesources.yml")) {
 				if($onlyDir && $dir != $onlyDir) continue;
 
 				if($source[0] != "/") $source = "/$source";
-				$revs = trim(`svn mergeinfo --show-revs=eligible $svnRoot$source $dir`);
+				$revsStr = trim(returnCommand("svn mergeinfo --show-revs=eligible $svnRoot$source $dir"));
+				$revs = $revsStr ? explode("\n", str_replace("r","", $revsStr)) : array();
+				if($limit && count($revs) > $limit) $revs = array_slice($revs, 0, $limit);
 				if($revs) {
-					echo "$dir (from $svnRoot$source)\n$revs\n\n";
+					echo "$dir (from $svnRoot$source)\n" . implode($revs, ',') . "\n\n";
 				} else {
 					$nothingFrom[] = "$name/$dir";
 				}
@@ -126,6 +155,16 @@ function suggestCommand($command) {
 		passthru($command);
 		echo "\n";
 	}
+}
+
+/**
+ * Prints the command without passthru
+ */
+function returnCommand($command) {
+	global $verbose;
+	
+	if($verbose) echo $command . "\n";
+	return `$command`;
 }
 
 /**
@@ -179,7 +218,7 @@ class SVNHelp {
 
 		// Check for any mergeinfo on subdirectories
 		$checkCommand = "svn propget --recursive svn:mergeinfo " . implode(" ", $CLI_checkItems);
-		if(trim(`$checkCommand`)) {
+		if(trim(returnCommand($checkCommand))) {
 			echo "There is junk mergeinfo on files and subdirectories in $url.  I need to scrub it "
 				. " before continuing.\n";
 
@@ -287,7 +326,7 @@ class SVNHelp {
 	 */
 	function xmlCommand($command) {
 		try {
-			$output = `$command`;
+			$output = returnCommand($command);
 			$svnInfo = @new SimpleXMLElement($output);
 		} catch(Exception $e) {
 			echo "\nCouldn't run this command - it returned bad XML data:\n$command\n\n";
