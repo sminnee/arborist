@@ -28,13 +28,17 @@ if(file_exists(".mergesources.yml")) {
 	}
 
 	$options = $_SERVER['argv'];
-	array_shift($options);
-	array_shift($options);
-
+	array_shift($options); // shift off command ('arb')
+	// Only shift off if we don't have arguments (e.g. '--help')
+	if(isset($options[0]) && strpos($options[0], '--') === FALSE) {
+		array_shift($options); // shift off mandatory options (e.g. '2.4/sapphire')
+	}
+	
 	$keyedOptions = array();
 	if($options) foreach($options as $option) {
 		// NO SPACES!  I'm a bad parser
-		if(preg_match('/--*([^=]+)=(.*)/', $option, $matches)) {
+		preg_match('/--*([^=]+)=?(.*)/', $option, $matches);
+		if(preg_match('/--*([^=]+)=?(.*)/', $option, $matches)) {
 			$key = trim(strtolower($matches[1]));
 			$val = trim($matches[2]);
 			$keyedOptions[$key] = $val;
