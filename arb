@@ -128,7 +128,7 @@ TXT;
 				$revs = $revsStr ? explode("\n", str_replace("r","", $revsStr)) : array();
 				if($limit && count($revs) > $limit) $revs = array_slice($revs, 0, $limit);
 				if($revs) {
-					echo "$dir (from $svnRoot$source)\n" . implode($revs, ',') . "\n\n";
+					echo "$dir (from $svnRoot$source): " . sizeof($revs) . " revisions:\n" . implode($revs, ',') . "\n\n";
 				} else {
 					$nothingFrom[] = "$name/$dir";
 				}
