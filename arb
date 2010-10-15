@@ -217,15 +217,20 @@ class SVNHelp {
 		}
 
 		// Check for any mergeinfo on subdirectories
-		$checkCommand = "svn propget --recursive svn:mergeinfo " . implode(" ", $CLI_checkItems);
-		if(trim(returnCommand($checkCommand))) {
+		$checkCommand = "svn propget --xml --recursive svn:mergeinfo " . implode(" ", $CLI_checkItems);
+		
+		$items = $this->xmlCommand($checkCommand)->xpath('//target');
+		if(sizeof($items) > 0) {
 			echo "There is junk mergeinfo on files and subdirectories in $url.  I need to scrub it "
 				. " before continuing.\n";
 
 			$propdelDir = $remoteDir ? "/tmp/arb-mergescrub" : $mergeDir;
 			if($remoteDir) execCommand("svn co $CLI_url $propdelDir");
+			
+			$targetPaths = array();
+			foreach($items as $item) $targetPaths[] = ''.$item['path'];
 
-			suggestCommand("svn propdel --recursive svn:mergeinfo $propdelDir/*");
+			suggestCommand("svn propdel svn:mergeinfo " . implode(" ", array_map('escapeshellarg',$targetPaths)));
 			passthru("svn diff $propdelDir --diff-cmd " . escapeshellarg(DIFF_CMD));
 			suggestCommand("svn commit $propdelDir -m 'MINOR: Removed explicit svn:mergeinfo from subfolders'");
 			if($remoteDir) execCommand("rm -rf '/tmp/arb-mergescrub'");
