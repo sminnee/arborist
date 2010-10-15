@@ -275,7 +275,7 @@ class SVNHelp {
 
 			switch($action) {
 			case 'y':
-				execCommand("svn update $dir");
+				execCommand("svn update --ignore-externals $dir");
 				execCommand("svn merge -c $rev $fullMergeSource $dir");
  				execCommand("svn propdel --recursive svn:mergeinfo $dir/*");
 				execCommand("svn diff $dir --diff-cmd " . escapeshellarg(DIFF_CMD));
