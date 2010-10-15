@@ -243,19 +243,15 @@ class SVNHelp {
 
 		$blockedRevs = array();
 
-		// Find mergebacks to block
-		if($blockMergebacks) {
-			foreach($revs as $i => $rev) {
-				if($this->isRevMergedFrom($rev, $fullMergeSource, $dir)) {
-					$blockedRevs[] = $rev;
-					unset($revs[$i]);
-				}
-			}
-		}
-
 		$numRevs = sizeof($revs);
-
 		foreach($revs as $i => $rev) {
+		// Find mergebacks to block
+			if($this->isRevMergedFrom($rev, $fullMergeSource, $dir)) {
+				echo "[" . ($i+1) . "/$numRevs] Merge r$rev: Skipping; this was originally sourced from this branch\n";
+				$blockedRevs[] = $rev;
+				continue;
+			}
+
 			$rev = str_replace("r","", $rev);
 			if($startrev && $rev < $startrev) continue;
 
